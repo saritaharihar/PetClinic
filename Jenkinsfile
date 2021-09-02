@@ -1,91 +1,91 @@
 pipeline {
+    
+  agent {
+      label 'worker-01'
+  }
 
-agent {
-  label 'master'
-}
+  parameters {
+    string defaultValue: 'master', description: 'This is the branch to checkout the code', name: 'branch_name'
+    choice choices: ['DEV', 'SIT', 'UAT'], description: 'Environment to be deployed', name: 'environment'
+  }
 
-parameters {
-  string description: 'Provide the branch name here', name: 'BRANCH_NAME'
-  choice choices: ['DEV', 'SIT', 'UAT'], description: 'environment name', name: 'environment'
-}
+  triggers {
+    cron '00 20 * * *'
+  }
 
-environment {
-  DATA_VALUE = "/opt/sample/data"
-}
+  options {
+    disableConcurrentBuilds()
+    buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20')
+    timestamps()
+  }
+  
+  tools {
+    jdk 'JAVA8'
+    maven 'MAVEN3'
+  }
 
-options {
-  buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')
-  disableConcurrentBuilds()
-  timestamps()
-  timeout(10)
-}
+  environment {
+    data_path = "/opt/data/"
+    SCANNER_HOME = tool 'sonarqube-scanner'
+  }
 
-triggers {
-  cron '00 * * * *'
-}
-
-tools {
-  jdk 'JAVA8'
-  maven 'MAVEN3'
-}
 
 stages {
   stage('Code Checkout') {
     steps {
-      git branch: '$BRANCH_NAME', credentialsId: 'github-credentials', url: 'https://github.com/gopishank/PetClinic.git'
+      git branch: '$branch_name', credentialsId: 'github-credentials', url: 'https://github.com/gopishank/PetClinic.git'
     }
   }
 
-  stage('Unit Testing') {
-    steps {
-      sh "mvn test"
-    }
-  }
-  
-  stage('SonarQube Scan'){
-      environment {
-          SCANNER_HOME = tool 'sonarqube-scanner'
-      }
-      steps {
-          withSonarQubeEnv(installationName: 'sonarqube-server'){
-              sh "$SCANNER_HOME/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+  stage('Tests & Scans') {
+      parallel {
+          stage('Unit Testing'){
+              steps {
+                  sh "mvn test"
+              }
+          }
+          stage('SonarQube Testing'){
+              steps {
+                  withSonarQubeEnv(installationName: 'sonarqube-server') {
+                      sh "$SCANNER_HOME/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                  }
+              }
           }
       }
   }
   
   stage('Package Code'){
       steps {
-          sh "mvn package -Dmaven.test-skip=true"
+          sh "mvn package -Dmaven.test.skip=true"
       }
   }
   
   stage('Upload Artifacts'){
       steps {
           sh '''
-          curl -u admin:admin123 POST "http://ec2-52-21-37-186.compute-1.amazonaws.com:8081/service/rest/v1/components?repository=petclinic" -H "accept: application/json" -H "Content-Type: multipart/form-data" -F "maven2.groupId=org.springframework.samples" -F "maven2.artifactId=petclinic" -F "maven2.version=${BUILD_ID}.0.0" -F "maven2.asset1=@${WORKSPACE}/target/petclinic.war" -F "maven2.asset1.extension=war"
+          curl -u admin:admin123 POST "http://ec2-3-237-98-114.compute-1.amazonaws.com:8081/service/rest/v1/components?repository=petclinic" -H "accept: application/json" -H "Content-Type: multipart/form-data" -F "maven2.groupId=org.springframework.samples" -F "maven2.artifactId=petclinic" -F "maven2.version=${BUILD_ID}.0.0" -F "maven2.asset1=@${WORKSPACE}/target/petclinic.war" -F "maven2.asset1.extension=war"
           '''
       }
   }
   
-  stage('Ansible Deploy'){
+  stage('Code Deploy'){
       steps {
           ansiblePlaybook installation: 'ANSIBLE29', playbook: '/opt/ansible/deploy.yaml'
       }
   }
-  
+
 }
 
 
 post {
   always {
-    echo "This block always runs"
+    echo "Always Runs the code"
   }
   success {
-    echo "This block only runs when the jenkins pipeline is successful"
+    echo "Only runs when its successful"
   }
   failure {
-    echo "This block only runs when the jenkins pipeline has failed"
+    echo "Only runs when the Job has failed"
   }
 }
-
 }
