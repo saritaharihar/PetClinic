@@ -73,6 +73,19 @@
             <artifactId>javax.servlet.jsp-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependencies>
+    <!-- JAXB API and Implementation -->
+    <dependency>
+        <groupId>jakarta.xml.bind</groupId>
+        <artifactId>jakarta.xml.bind-api</artifactId>
+        <version>3.0.1</version> <!-- Compatible with Java 17 -->
+    </dependency>
+    <dependency>
+        <groupId>org.glassfish.jaxb</groupId>
+        <artifactId>jaxb-runtime</artifactId>
+        <version>3.0.1</version>
+    </dependency>
+</dependencies>
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-jasper-el</artifactId>
