@@ -10,6 +10,7 @@
 
     <properties>
         <java.version>1.7</java.version>
+        <spring-io-platform.version>2.0.3.RELEASE</spring-io-platform.version> <!-- Version for platform-bom -->
         <!-- Other properties omitted for brevity -->
     </properties>
 
