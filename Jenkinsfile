@@ -2,17 +2,16 @@ pipeline {
     agent any
 
     environment {
-        JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  // Use Java 8
+        JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  
         PATH = "${JAVA_HOME}/bin:${PATH}"
         TOMCAT_SERVER = '52.91.243.23'
-        TOMCAT_USER = 'admin'
-        TOMCAT_PASS = 'password'  // Use Jenkins credentials instead of hardcoding
+        TOMCAT_USER = 'ubuntu'  // Use 'ubuntu', not 'admin'
         TOMCAT_DEPLOY_PATH = '/otp/tomcat/webapps'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
 
     tools {
-        maven 'MAVEN3'  // Use configured Maven installation
+        maven 'MAVEN3'  
     }
 
     stages {
@@ -24,7 +23,7 @@ pipeline {
 
         stage('Build with Maven') {
             steps {
-                sh 'mvn clean install'
+                sh 'mvn clean package'
             }
         }
 
@@ -37,10 +36,14 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 script {
-                    def warFile = sh(script: "ls target/*.war | head -n 1", returnStdout: true).trim()
-                    if (warFile) {
+                    def warFile = 'target/petclinic.war'  // Directly use known WAR filename
+
+                    if (fileExists(warFile)) {
                         echo "Deploying WAR file: ${warFile}"
-                        sh "scp ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}"
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
+                            scp -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
+                        """
                     } else {
                         error "WAR file not found!"
                     }
