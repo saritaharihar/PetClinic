@@ -4,7 +4,7 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  // Use Java 8
         PATH = "${JAVA_HOME}/bin:${PATH}"
-        TOMCAT_SERVER = '3.84.213.251'
+        TOMCAT_SERVER = '52.91.243.23'
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = 'password'  // Use Jenkins credentials instead of hardcoding
         TOMCAT_DEPLOY_PATH = '/otp/tomcat/webapps'
