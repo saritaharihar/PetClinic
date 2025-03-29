@@ -41,7 +41,7 @@ pipeline {
                     if (fileExists(warFile)) {
                         echo "Deploying WAR file: ${warFile}"
 
-                        withCredentials([sshUserPrivateKey(credentialsId: 'jenkins', keyFileVariable: 'SSH_KEY')]) {
+                        withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                             sh """
                                 ssh -i $SSH_KEY ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
                                 scp -i $SSH_KEY ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
