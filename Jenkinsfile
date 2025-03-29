@@ -1,91 +1,62 @@
 pipeline {
-    
-  agent {
-      label 'worker-01'
-  }
+    agent any
 
-  parameters {
-    string defaultValue: 'master', description: 'This is the branch to checkout the code', name: 'branch_name'
-    choice choices: ['DEV', 'SIT', 'UAT'], description: 'Environment to be deployed', name: 'environment'
-  }
-
-  triggers {
-    cron '00 20 * * *'
-  }
-
-  options {
-    disableConcurrentBuilds()
-    buildDiscarder logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '20')
-    timestamps()
-  }
-  
-  tools {
-    jdk 'JAVA8'
-    maven 'MAVEN3'
-  }
-
-  environment {
-    data_path = "/opt/data/"
-    SCANNER_HOME = tool 'sonarqube-scanner'
-  }
-
-
-stages {
-  stage('Code Checkout') {
-    steps {
-      git branch: '$branch_name', credentialsId: 'github-credentials', url: 'https://github.com/gopishank/PetClinic.git'
+    environment {
+        TOMCAT_SERVER = '3.84.213.251'
+        TOMCAT_USER = 'admin'
+        TOMCAT_PASS = 'password'  // Use Jenkins credentials instead of hardcoding
+        TOMCAT_DEPLOY_PATH = '/otp/tomcat/webapps'
+        WAR_FILE = 'target/Nextjs.war'
+        EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
-  }
 
-  stage('Tests & Scans') {
-      parallel {
-          stage('Unit Testing'){
-              steps {
-                  sh "mvn test"
-              }
-          }
-          stage('SonarQube Testing'){
-              steps {
-                  withSonarQubeEnv(installationName: 'sonarqube-server') {
-                      sh "$SCANNER_HOME/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
-                  }
-              }
-          }
-      }
-  }
-  
-  stage('Package Code'){
-      steps {
-          sh "mvn package -Dmaven.test.skip=true"
-      }
-  }
-  
-  stage('Upload Artifacts'){
-      steps {
-          sh '''
-          curl -u admin:admin123 POST "http://ec2-3-237-98-114.compute-1.amazonaws.com:8081/service/rest/v1/components?repository=petclinic" -H "accept: application/json" -H "Content-Type: multipart/form-data" -F "maven2.groupId=org.springframework.samples" -F "maven2.artifactId=petclinic" -F "maven2.version=${BUILD_ID}.0.0" -F "maven2.asset1=@${WORKSPACE}/target/petclinic.war" -F "maven2.asset1.extension=war"
-          '''
-      }
-  }
-  
-  stage('Code Deploy'){
-      steps {
-          ansiblePlaybook installation: 'ANSIBLE29', playbook: '/opt/ansible/deploy.yaml'
-      }
-  }
+    tools {
+        maven 'MAVEN3'  // Use the Maven installation configured in Jenkins
+    }
 
-}
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'master', url: 'https://github.com/saritaharihar/PetClinic.git'
+            }
+        }
 
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
 
-post {
-  always {
-    echo "Always Runs the code"
-  }
-  success {
-    echo "Only runs when its successful"
-  }
-  failure {
-    echo "Only runs when the Job has failed"
-  }
-}
+        stage('Run Unit Tests') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                script {
+                    def warExists = fileExists("${WAR_FILE}")
+                    if (warExists) {
+                        sh "scp ${WAR_FILE} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}"
+                    } else {
+                        error "WAR file not found!"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext subject: "Deployment Successful",
+                     body: "Jenkins successfully deployed the application to Tomcat.",
+                     to: "${EMAIL_RECIPIENTS}"
+        }
+        failure {
+            emailext subject: "Deployment Failed",
+                     body: "Jenkins failed to deploy the application. Check logs for errors.",
+                     to: "${EMAIL_RECIPIENTS}"
+        }
+    }
 }
