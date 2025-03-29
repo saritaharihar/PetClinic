@@ -2,6 +2,8 @@ pipeline {
     agent any
 
     environment {
+        JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  // Set Java 8 as the environment
+        PATH = "${JAVA_HOME}/bin:${PATH}"
         TOMCAT_SERVER = '3.84.213.251'
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = 'password'  // Use Jenkins credentials instead of hardcoding
