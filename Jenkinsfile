@@ -6,7 +6,7 @@ pipeline {
         PATH = "${JAVA_HOME}/bin:${PATH}"
         TOMCAT_SERVER = '52.91.243.23'
         TOMCAT_USER = 'ubuntu'  // Use 'ubuntu', not 'admin'
-        TOMCAT_DEPLOY_PATH = '/otp/tomcat/webapps'
+        TOMCAT_DEPLOY_PATH = '/opt/tomcat/webapps'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
 
