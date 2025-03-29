@@ -5,7 +5,7 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  
         PATH = "${JAVA_HOME}/bin:${PATH}"
         TOMCAT_SERVER = '52.91.243.23'
-        TOMCAT_USER = 'ubuntu'  // Use 'ubuntu', not 'admin'
+        TOMCAT_USER = 'ubuntu'
         TOMCAT_DEPLOY_PATH = '/opt/tomcat/webapps'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
@@ -36,14 +36,18 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 script {
-                    def warFile = 'target/petclinic.war'  // Directly use known WAR filename
+                    def warFile = 'target/petclinic.war'  // Known WAR filename
 
                     if (fileExists(warFile)) {
                         echo "Deploying WAR file: ${warFile}"
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
-                            scp -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
-                        """
+
+                        withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                            sh """
+                                ssh -i $SSH_KEY ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
+                                scp -i $SSH_KEY ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
+                                ssh -i $SSH_KEY ${TOMCAT_USER}@${TOMCAT_SERVER} 'sudo systemctl restart tomcat'
+                            """
+                        }
                     } else {
                         error "WAR file not found!"
                     }
