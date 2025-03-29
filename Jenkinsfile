@@ -11,7 +11,7 @@ pipeline {
     }
 
     tools {
-        maven 'MAVEN3'  
+        maven 'MAVEN3'
     }
 
     stages {
@@ -36,17 +36,18 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 script {
-                    def warFile = 'target/petclinic.war'  // Known WAR filename
+                    def warFile = 'target/petclinic.war'
 
                     if (fileExists(warFile)) {
                         echo "Deploying WAR file: ${warFile}"
 
                         withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                            sh """
-                                ssh -i $SSH_KEY ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
-                                scp -i $SSH_KEY ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
-                                ssh -i $SSH_KEY ${TOMCAT_USER}@${TOMCAT_SERVER} 'sudo systemctl restart tomcat'
-                            """
+                            sh(script: """
+                                chmod 600 $SSH_KEY
+                                ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
+                                scp -i $SSH_KEY -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
+                                ssh -i $SSH_KEY -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'sudo systemctl restart tomcat'
+                            """, sensitive: true)
                         }
                     } else {
                         error "WAR file not found!"
