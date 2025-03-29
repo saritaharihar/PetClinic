@@ -8,7 +8,7 @@ pipeline {
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = 'password'  // Use Jenkins credentials instead of hardcoding
         TOMCAT_DEPLOY_PATH = '/otp/tomcat/webapps'
-        WAR_FILE = 'target/Nextjs.war'
+        WAR_FILE = 'target/*.war'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
 
