@@ -9,17 +9,24 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
+    <properties>
+        <spring-boot.version>3.2.1</spring-boot.version>
+        <spring.version>6.1.0</spring.version>
+    </properties>
+
     <dependencies>
         <!-- Spring Boot Starter Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring-boot.version}</version>
         </dependency>
 
         <!-- Spring OXM for JAXB support -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-oxm</artifactId>
+            <version>${spring.version}</version>
         </dependency>
 
         <!-- JAXB API -->
@@ -36,7 +43,7 @@
             <version>2.3.1</version>
         </dependency>
 
-        <!-- istack-commons-runtime (Provides com.sun.istack.Pool) -->
+        <!-- istack-commons-runtime -->
         <dependency>
             <groupId>com.sun.istack</groupId>
             <artifactId>istack-commons-runtime</artifactId>
@@ -47,6 +54,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <version>${spring-boot.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -57,6 +65,7 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
             </plugin>
         </plugins>
     </build>
