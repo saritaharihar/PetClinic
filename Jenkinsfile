@@ -4,7 +4,7 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  
         PATH = "${JAVA_HOME}/bin:${PATH}"
-        TOMCAT_SERVER = '44.223.64.30'  // Update with your Tomcat server's public IP
+        TOMCAT_SERVER = '54.234.42.65'  // Update with your Tomcat server's public IP
         TOMCAT_USER = 'ubuntu'
         TOMCAT_DEPLOY_PATH = '/opt/tomcat/webapps'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
