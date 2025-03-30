@@ -1,38 +1,74 @@
-stage('Deploy to Tomcat') {
-    steps {
-        script {
-            def warFile = 'target/petclinic.war'
+pipeline {
+    agent any
 
-            if (fileExists(warFile)) {
-                echo "Deploying WAR file: ${warFile}"
+    environment {
+        JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  
+        PATH = "${JAVA_HOME}/bin:${PATH}"
+        TOMCAT_SERVER = '52.91.12.198'  // Update with your Tomcat server's public IP
+        TOMCAT_USER = 'ubuntu'
+        TOMCAT_DEPLOY_PATH = '/opt/tomcat9/webapps'
+        EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
+    }
 
-                withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                    sh """
-                        chmod 600 "${env.SSH_KEY}"
-                        ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'rm -rf ${TOMCAT_DEPLOY_PATH}/petclinic'
-                        scp -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
-                        ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} '
-                            sudo chown -R tomcat:tomcat ${TOMCAT_DEPLOY_PATH}/petclinic.war;
-                            sudo chmod -R 755 ${TOMCAT_DEPLOY_PATH}/petclinic.war;
-                            sudo systemctl restart tomcat
-                        '
-                        sleep 10
-                        ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} '
-                            for i in {1..30}; do
-                                if curl -Is http://localhost:8080/petclinic | grep "200 OK"; then
-                                    echo "Application deployed successfully!";
-                                    exit 0;
-                                fi;
-                                sleep 5;
-                            done;
-                            echo "Application failed to deploy!";
-                            exit 1;
-                        '
-                    """
-                }
-            } else {
-                error "WAR file not found!"
+    tools {
+        maven 'MAVEN3'
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'master', url: 'https://github.com/saritaharihar/PetClinic.git'
             }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('Deploy to Tomcat') {
+            steps {
+                script {
+                    def warFile = 'target/petclinic.war'
+
+                    if (fileExists(warFile)) {
+                        echo "Deploying WAR file: ${warFile}"
+
+                        withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                            sh """
+                                chmod 600 "${env.SSH_KEY}"
+                                ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
+                                scp -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
+                                ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'sudo systemctl restart tomcat'
+                                sleep 10
+                                ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'curl -Is http://localhost:8080/petclinic | head -n 1'
+                            """
+                        }
+                    } else {
+                        error "WAR file not found!"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            emailext subject: "✅ Deployment Successful",
+                     body: "Jenkins successfully deployed the application to Tomcat.",
+                     to: "${EMAIL_RECIPIENTS}"
+        }
+        failure {
+            emailext subject: "❌ Deployment Failed",
+                     body: "Jenkins failed to deploy the application. Check logs for errors.",
+                     to: "${EMAIL_RECIPIENTS}"
         }
     }
 }
