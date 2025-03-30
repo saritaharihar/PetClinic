@@ -4,8 +4,7 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  
         PATH = "${JAVA_HOME}/bin:${PATH}"
-        //TOMCAT_SERVER = '172.31.16.124'  // Update to your server PrivateIP
-        TOMCAT_SERVER = '44.223.64.30'  // Update to your server PublicIP
+        TOMCAT_SERVER = '44.223.64.30'  // Update with your Tomcat server's public IP
         TOMCAT_USER = 'ubuntu'
         TOMCAT_DEPLOY_PATH = '/opt/tomcat/webapps'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
@@ -48,6 +47,8 @@ pipeline {
                                 ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'mkdir -p ${TOMCAT_DEPLOY_PATH}'
                                 scp -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:${TOMCAT_DEPLOY_PATH}/petclinic.war
                                 ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'sudo systemctl restart tomcat'
+                                sleep 10
+                                ssh -i "${env.SSH_KEY}" -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} 'curl -Is http://localhost:8080/petclinic | head -n 1'
                             """
                         }
                     } else {
