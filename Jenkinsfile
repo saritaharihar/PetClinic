@@ -6,7 +6,7 @@ pipeline {
         PATH = "${JAVA_HOME}/bin:${PATH}"
         TOMCAT_SERVER = '54.234.42.65'  // Update with your Tomcat server's public IP
         TOMCAT_USER = 'ubuntu'
-        TOMCAT_DEPLOY_PATH = '/opt/tomcat/webapps'
+        TOMCAT_DEPLOY_PATH = '/opt/tomcat9/webapps'
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
 
