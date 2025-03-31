@@ -52,7 +52,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: "master", credentialsId: 'github-credentials', url: 'https://github.com/saritaharihar/PetClinic.git'
+                git branch: "master", credentialsId: 'github-token', url: 'https://github.com/saritaharihar/PetClinic.git'
             }
         }
 
@@ -82,7 +82,7 @@ pipeline {
         stage('Upload Artifacts to Nexus') {
             steps {
                 sh '''
-                curl -u $NEXUS_CREDENTIALS POST "$NEXUS_URL/service/rest/v1/components?repository=$NEXUS_REPO" \
+                curl -u $NEXUS_CREDENTIALS -X POST "$NEXUS_URL/service/rest/v1/components?repository=$NEXUS_REPO" \
                 -H "accept: application/json" -H "Content-Type: multipart/form-data" \
                 -F "maven2.groupId=org.springframework.samples" \
                 -F "maven2.artifactId=petclinic" \
@@ -112,9 +112,9 @@ pipeline {
                 script {
                     withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                         sh '''
-                        chmod 600 "$NEXT_SSH_KEY"
-                        scp -i "$NEXT_SSH_KEY" -r * $NEXT_USER@$NEXT_SERVER:$NEXT_DEPLOY_PATH
-                        ssh -i "$NEXT_SSH_KEY" -o StrictHostKeyChecking=no $NEXT_USER@$NEXT_SERVER << 'EOF'
+                        chmod 600 "$SSH_KEY"
+                        scp -i "$SSH_KEY" -r * $NEXT_USER@$NEXT_SERVER:$NEXT_DEPLOY_PATH
+                        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $NEXT_USER@$NEXT_SERVER << 'EOF'
                             cd $NEXT_DEPLOY_PATH
                             npm install
                             npm run build
@@ -129,7 +129,7 @@ pipeline {
         
         stage('Run Ansible Deployment') {
             steps {
-                ansiblePlaybook installation: '**ANSIBLE29**', playbook: '**/opt/ansible/deploy.yaml**'
+                ansiblePlaybook installation: 'ANSIBLE29', playbook: '/opt/ansible/deploy.yaml'
             }
         }
     }
@@ -138,12 +138,18 @@ pipeline {
         success {
             emailext subject: "✅ Deployment Successful",
                      body: "Jenkins successfully deployed both Java & Next.js applications.",
-                     to: "$EMAIL_RECIPIENTS"
+                     to: "$EMAIL_RECIPIENTS",
+                     replyTo: 'no-reply@techspira.co.in',
+                     from: 'jenkins@techspira.co.in',
+                     credentialsId: 'Email-techspira'
         }
         failure {
             emailext subject: "❌ Deployment Failed",
                      body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                     to: "$EMAIL_RECIPIENTS"
+                     to: "$EMAIL_RECIPIENTS",
+                     replyTo: 'no-reply@techspira.co.in',
+                     from: 'jenkins@techspira.co.in',
+                     credentialsId: 'Email-techspira'
         }
     }
 }
