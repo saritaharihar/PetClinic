@@ -134,22 +134,20 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            emailext subject: "✅ Deployment Successful",
-                     body: "Jenkins successfully deployed both Java & Next.js applications.",
-                     to: "$EMAIL_RECIPIENTS",
-                     replyTo: 'no-reply@techspira.co.in',
-                     from: 'jenkins@techspira.co.in',
-                     credentialsId: 'Email-techspira'
-        }
-        failure {
-            emailext subject: "❌ Deployment Failed",
-                     body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                     to: "$EMAIL_RECIPIENTS",
-                     replyTo: 'no-reply@techspira.co.in',
-                     from: 'jenkins@techspira.co.in',
-                     credentialsId: 'Email-techspira'
-        }
+post {
+    success {
+        emailext subject: "✅ Deployment Successful",
+                 body: "Jenkins successfully deployed both Java & Next.js applications.",
+                 to: "$EMAIL_RECIPIENTS",
+                 replyTo: 'no-reply@techspira.co.in',
+                 from: 'jenkins@techspira.co.in'
     }
+    failure {
+        emailext subject: "❌ Deployment Failed",
+                 body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
+                 to: "$EMAIL_RECIPIENTS",
+                 replyTo: 'no-reply@techspira.co.in',
+                 from: 'jenkins@techspira.co.in'
+    }
+}
 }
