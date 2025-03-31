@@ -26,7 +26,7 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${PATH}"
-        
+        EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
         // Tomcat Variables
         TOMCAT_SERVER = '54.174.217.216'
         TOMCAT_USER = 'ubuntu'
@@ -138,16 +138,12 @@ post {
     success {
         emailext subject: "✅ Deployment Successful",
                  body: "Jenkins successfully deployed both Java & Next.js applications.",
-                 to: "$EMAIL_RECIPIENTS",
-                 replyTo: 'no-reply@techspira.co.in',
-                 from: 'jenkins@techspira.co.in'
+                 to: "$EMAIL_RECIPIENTS"
     }
     failure {
         emailext subject: "❌ Deployment Failed",
                  body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                 to: "$EMAIL_RECIPIENTS",
-                 replyTo: 'no-reply@techspira.co.in',
-                 from: 'jenkins@techspira.co.in'
+                 to: "$EMAIL_RECIPIENTS"
     }
 }
 }
