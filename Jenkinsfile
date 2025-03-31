@@ -138,12 +138,12 @@ post {
     success {
         emailext subject: "✅ Deployment Successful",
                  body: "Jenkins successfully deployed both Java & Next.js applications.",
-                 to: "$EMAIL_RECIPIENTS"
+                 to: "${env.EMAIL_RECIPIENTS}"
     }
     failure {
         emailext subject: "❌ Deployment Failed",
                  body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                 to: "$EMAIL_RECIPIENTS"
+                 to: "${env.EMAIL_RECIPIENTS}"
     }
 }
 }
