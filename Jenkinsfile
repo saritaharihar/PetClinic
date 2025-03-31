@@ -68,7 +68,7 @@ pipeline {
 
         stage('Checkout Next.js Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/saritaharihar/PetClinic.git'  // Update your repo
+                git branch: 'master', url: 'https://github.com/saritaharihar/PetClinic.git'  // Update your repo
             }
         }
 
