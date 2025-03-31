@@ -4,9 +4,17 @@ pipeline {
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'  
         PATH = "${JAVA_HOME}/bin:${PATH}"
-        TOMCAT_SERVER = '54.158.1.245'  // Update with your Tomcat server's public IP
+        
+        // Tomcat Variables
+        TOMCAT_SERVER = '54.158.1.245'  
         TOMCAT_USER = 'ubuntu'
         TOMCAT_DEPLOY_PATH = '/opt/tomcat9/webapps'
+        
+        // Next.js Variables
+        NEXT_SERVER = '54.158.1.245'  // Replace with your EC2 instance IP
+        NEXT_USER = 'ubuntu'
+        NEXT_DEPLOY_PATH = '/var/www/nextjs-app'
+        
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
 
@@ -57,17 +65,56 @@ pipeline {
                 }
             }
         }
+
+        stage('Checkout Next.js Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/saritaharihar/PetClinic.git'  // Update your repo
+            }
+        }
+
+        stage('Build Next.js App') {
+            steps {
+                script {
+                    sh 'npm install'
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Deploy Next.js to EC2') {
+            steps {
+                script {
+                    withCredentials([sshUserPrivateKey(credentialsId: 'nextjs-ssh-key', keyFileVariable: 'NEXT_SSH_KEY')]) {
+                        sh """
+                            chmod 600 "${env.NEXT_SSH_KEY}"
+                            
+                            # Copy files to EC2
+                            scp -i "${env.NEXT_SSH_KEY}" -r * ${NEXT_USER}@${NEXT_SERVER}:${NEXT_DEPLOY_PATH}
+
+                            # SSH into EC2 and restart Next.js
+                            ssh -i "${env.NEXT_SSH_KEY}" -o StrictHostKeyChecking=no ${NEXT_USER}@${NEXT_SERVER} << 'EOF'
+                                cd ${NEXT_DEPLOY_PATH}
+                                npm install
+                                npm run build
+                                pm2 restart next-app || pm2 start npm --name "next-app" -- start
+                                pm2 save
+                            EOF
+                        """
+                    }
+                }
+            }
+        }
     }
 
     post {
         success {
             emailext subject: "✅ Deployment Successful",
-                     body: "Jenkins successfully deployed the application to Tomcat.",
+                     body: "Jenkins successfully deployed both Java & Next.js applications.",
                      to: "${EMAIL_RECIPIENTS}"
         }
         failure {
             emailext subject: "❌ Deployment Failed",
-                     body: "Jenkins failed to deploy the application. Check logs for errors.",
+                     body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
                      to: "${EMAIL_RECIPIENTS}"
         }
     }
