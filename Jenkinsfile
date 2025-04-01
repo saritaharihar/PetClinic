@@ -42,6 +42,9 @@ pipeline {
 
         // SonarQube Scanner
         SCANNER_HOME = tool 'sonarqube-scanner'
+
+        // Email Variables
+        EMAIL_RECIPIENTS = 'your-email@example.com' // Add your email here or fetch from Jenkins credentials
     }
 
     stages {
@@ -131,18 +134,14 @@ pipeline {
 
     post {
         success {
-            withCredentials([string(credentialsId: 'Email-techspira', variable: 'EMAIL_RECIPIENTS')]) {
-                emailext subject: "✅ Deployment Successful",
-                         body: "Jenkins successfully deployed both Java & Next.js applications.",
-                         to: EMAIL_RECIPIENTS
-            }
+            emailext subject: "✅ Deployment Successful",
+                     body: "Jenkins successfully deployed both Java & Next.js applications.",
+                     to: EMAIL_RECIPIENTS
         }
         failure {
-            withCredentials([string(credentialsId: 'Email-techspira', variable: 'EMAIL_RECIPIENTS')]) {
-                emailext subject: "❌ Deployment Failed",
-                         body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                         to: EMAIL_RECIPIENTS
-            }
+            emailext subject: "❌ Deployment Failed",
+                     body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
+                     to: EMAIL_RECIPIENTS
         }
     }
 }
