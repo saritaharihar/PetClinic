@@ -1,15 +1,13 @@
 pipeline {
-    agent {
-        label 'worker-01'
-    }
+    agent { label 'worker-01' }
 
     parameters {
-        string defaultValue: 'master', description: 'This is the branch to checkout the code', name: 'branch_name'
-        choice choices: ['DEV', 'SIT', 'UAT'], description: 'Environment to be deployed', name: 'environment'
+        string(defaultValue: 'master', description: 'Branch to checkout', name: 'branch_name')
+        choice(choices: ['DEV', 'SIT', 'UAT'], description: 'Deployment Environment', name: 'environment')
     }
 
     triggers {
-        cron '00 20 * * *'
+        cron('00 20 * * *')
     }
 
     options {
@@ -27,32 +25,33 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:${PATH}"
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
+        
         // Tomcat Variables
         TOMCAT_SERVER = '54.86.98.91'
         TOMCAT_USER = 'ubuntu'
         TOMCAT_DEPLOY_PATH = '/opt/tomcat9/webapps'
-        
+
         // Next.js Variables
         NEXT_SERVER = '54.86.98.91'
         NEXT_USER = 'ubuntu'
         NEXT_DEPLOY_PATH = '/var/www/nextjs-app'
-        
+
         // Nexus Variables
         NEXUS_URL = 'http://54.86.98.91:3000'
         NEXUS_REPO = 'petclinic'
         NEXUS_CREDENTIALS = 'admin:password'
-        
+
         // SonarQube
         SCANNER_HOME = tool 'sonarqube-scanner'
-        
-        // Email Notifications
-        EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: "master", credentialsId: 'github-token', url: 'https://github.com/saritaharihar/PetClinic.git'
+                script {
+                    echo "Cloning repository..."
+                    git branch: "${params.branch_name}", credentialsId: 'github-token', url: 'https://github.com/saritaharihar/PetClinic.git'
+                }
             }
         }
 
@@ -60,13 +59,19 @@ pipeline {
             parallel {
                 stage('Unit Testing') {
                     steps {
-                        sh "mvn test"
+                        script {
+                            echo "Running unit tests..."
+                            sh "mvn test"
+                        }
                     }
                 }
-                stage('SonarQube Testing') {
+                stage('SonarQube Analysis') {
                     steps {
-                        withSonarQubeEnv(installationName: 'sonarqube-server') {
-                            sh "$SCANNER_HOME/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                        script {
+                            echo "Running SonarQube analysis..."
+                            withSonarQubeEnv('sonarqube-server') {
+                                sh "$SCANNER_HOME/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                            }
                         }
                     }
                 }
@@ -75,33 +80,40 @@ pipeline {
         
         stage('Package Code') {
             steps {
-                sh "mvn package -Dmaven.test.skip=true"
+                script {
+                    echo "Packaging the application..."
+                    sh "mvn package -Dmaven.test.skip=true"
+                }
             }
         }
         
-        stage('Upload Artifacts to Nexus') {
+        stage('Upload to Nexus') {
             steps {
-                sh '''
-                curl -u $NEXUS_CREDENTIALS -X POST "$NEXUS_URL/service/rest/v1/components?repository=$NEXUS_REPO" \
-                -H "accept: application/json" -H "Content-Type: multipart/form-data" \
-                -F "maven2.groupId=org.springframework.samples" \
-                -F "maven2.artifactId=petclinic" \
-                -F "maven2.version=${BUILD_ID}.0.0" \
-                -F "maven2.asset1=@${WORKSPACE}/target/petclinic.war" \
-                -F "maven2.asset1.extension=war"
-                '''
+                script {
+                    echo "Uploading artifacts to Nexus..."
+                    sh """
+                    curl -u $NEXUS_CREDENTIALS -X POST "$NEXUS_URL/service/rest/v1/components?repository=$NEXUS_REPO" \
+                    -H "accept: application/json" -H "Content-Type: multipart/form-data" \
+                    -F "maven2.groupId=org.springframework.samples" \
+                    -F "maven2.artifactId=petclinic" \
+                    -F "maven2.version=${BUILD_ID}.0.0" \
+                    -F "maven2.asset1=@${WORKSPACE}/target/petclinic.war" \
+                    -F "maven2.asset1.extension=war"
+                    """
+                }
             }
         }
         
         stage('Deploy to Tomcat') {
             steps {
                 script {
+                    echo "Deploying Java application to Tomcat..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                        sh '''
+                        sh """
                         chmod 600 "$SSH_KEY"
                         scp -i "$SSH_KEY" -o StrictHostKeyChecking=no target/petclinic.war $TOMCAT_USER@$TOMCAT_SERVER:$TOMCAT_DEPLOY_PATH/petclinic.war
                         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $TOMCAT_USER@$TOMCAT_SERVER 'sudo systemctl restart tomcat'
-                        '''
+                        """
                     }
                 }
             }
@@ -110,18 +122,19 @@ pipeline {
         stage('Deploy Next.js to EC2') {
             steps {
                 script {
+                    echo "Deploying Next.js application..."
                     withCredentials([sshUserPrivateKey(credentialsId: 'tomcat-ssh-key', keyFileVariable: 'SSH_KEY')]) {
-                        sh '''
+                        sh """
                         chmod 600 "$SSH_KEY"
-                        scp -i "$SSH_KEY" -r * $NEXT_USER@$NEXT_SERVER:$NEXT_DEPLOY_PATH
+                        scp -i "$SSH_KEY" -r .next package.json ecosystem.config.js $NEXT_USER@$NEXT_SERVER:$NEXT_DEPLOY_PATH
                         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $NEXT_USER@$NEXT_SERVER << 'EOF'
                             cd $NEXT_DEPLOY_PATH
-                            npm install
+                            npm install --omit=dev
                             npm run build
-                            pm2 restart next-app || pm2 start npm --name "next-app" -- start
+                            pm2 restart ecosystem.config.js || pm2 start npm --name "next-app" -- start
                             pm2 save
                         EOF
-                        '''
+                        """
                     }
                 }
             }
@@ -129,21 +142,30 @@ pipeline {
         
         stage('Run Ansible Deployment') {
             steps {
-                ansiblePlaybook installation: 'ANSIBLE29', playbook: '/opt/ansible/deploy.yaml'
+                script {
+                    echo "Executing Ansible deployment..."
+                    ansiblePlaybook installation: 'ANSIBLE29', playbook: '/opt/ansible/deploy.yaml'
+                }
             }
         }
     }
 
-post {
-    success {
-        emailext subject: "✅ Deployment Successful",
-                 body: "Jenkins successfully deployed both Java & Next.js applications.",
-                 to: "${env.EMAIL_RECIPIENTS}"
+    post {
+        success {
+            script {
+                echo "✅ Deployment Successful!"
+                emailext subject: "✅ Deployment Successful",
+                         body: "Jenkins successfully deployed both Java & Next.js applications.",
+                         to: "${EMAIL_RECIPIENTS}"
+            }
+        }
+        failure {
+            script {
+                echo "❌ Deployment Failed. Check logs for details."
+                emailext subject: "❌ Deployment Failed",
+                         body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
+                         to: "${EMAIL_RECIPIENTS}"
+            }
+        }
     }
-    failure {
-        emailext subject: "❌ Deployment Failed",
-                 body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                 to: "${env.EMAIL_RECIPIENTS}"
-    }
-}
 }
