@@ -19,7 +19,6 @@ pipeline {
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
-        sonarqube 'sonarqube-scanner'  // Ensure SonarQube scanner is configured in Jenkins
     }
 
     environment {
@@ -43,7 +42,7 @@ pipeline {
         NEXUS_CREDENTIALS = 'admin:password'
         
         // SonarQube Scanner
-        SCANNER_HOME = tool 'sonarqube-scanner'
+        SCANNER_HOME = tool name: 'SonarQube Scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
     }
 
     stages {
