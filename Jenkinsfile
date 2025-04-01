@@ -19,7 +19,7 @@ pipeline {
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
-        sonar 'SonarQube Scanner'  // Use the correct tool name defined in Jenkins
+        sonar 'SonarQube Scanner'
     }
 
     environment {
