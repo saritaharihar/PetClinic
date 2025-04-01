@@ -19,7 +19,7 @@ pipeline {
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
-        sonar 'sonarqube-scanner'
+        sonarQubeScanner 'sonarqube-scanner'  // Correct tool for SonarQube Scanner
     }
 
     environment {
