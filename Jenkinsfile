@@ -19,7 +19,7 @@ pipeline {
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
-        sonarQubeScanner 'sonarqube-scanner'  // Correct tool for SonarQube Scanner
+        sonar 'SonarQube Scanner'  // Use the correct tool name defined in Jenkins
     }
 
     environment {
@@ -41,10 +41,7 @@ pipeline {
         NEXUS_REPO = 'petclinic'
 
         // SonarQube Scanner
-        SCANNER_HOME = tool 'sonarqube-scanner'
-
-        // Email Variables
-        EMAIL_RECIPIENTS = 'your-email@example.com' // Add your email here or fetch from Jenkins credentials
+        SCANNER_HOME = tool 'SonarQube Scanner'
     }
 
     stages {
@@ -134,14 +131,18 @@ pipeline {
 
     post {
         success {
-            emailext subject: "✅ Deployment Successful",
-                     body: "Jenkins successfully deployed both Java & Next.js applications.",
-                     to: EMAIL_RECIPIENTS
+            withCredentials([string(credentialsId: 'Email-techspira', variable: 'EMAIL_RECIPIENTS')]) {
+                emailext subject: "✅ Deployment Successful",
+                         body: "Jenkins successfully deployed both Java & Next.js applications.",
+                         to: EMAIL_RECIPIENTS
+            }
         }
         failure {
-            emailext subject: "❌ Deployment Failed",
-                     body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
-                     to: EMAIL_RECIPIENTS
+            withCredentials([string(credentialsId: 'Email-techspira', variable: 'EMAIL_RECIPIENTS')]) {
+                emailext subject: "❌ Deployment Failed",
+                         body: "Jenkins failed to deploy one or both applications. Check logs for errors.",
+                         to: EMAIL_RECIPIENTS
+            }
         }
     }
 }
