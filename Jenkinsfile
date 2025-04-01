@@ -23,7 +23,7 @@ pipeline {
 
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
-        PATH = "${JAVA_HOME}/bin:${PATH}"
+        PATH = "${JAVA_HOME}/bin:$PATH"
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
         
         // Tomcat Variables
@@ -50,7 +50,14 @@ pipeline {
             steps {
                 script {
                     echo "Cloning repository..."
-                    git branch: "${params.branch_name}", credentialsId: 'github-token', url: 'https://github.com/saritaharihar/PetClinic.git'
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "${params.branch_name}"]],
+                        userRemoteConfigs: [[
+                            url: 'https://github.com/saritaharihar/PetClinic.git',
+                            credentialsId: 'github-token'
+                        ]]
+                    ])
                 }
             }
         }
@@ -70,7 +77,13 @@ pipeline {
                         script {
                             echo "Running SonarQube analysis..."
                             withSonarQubeEnv('sonarqube-server') {
-                                sh "$SCANNER_HOME/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+                                sh """
+                                $SCANNER_HOME/bin/sonar-scanner \
+                                -Dsonar.projectBaseDir=$WORKSPACE \
+                                -Dsonar.projectKey=petclinic \
+                                -Dsonar.sources=src \
+                                -Dsonar.java.binaries=target/classes
+                                """
                             }
                         }
                     }
@@ -129,9 +142,9 @@ pipeline {
                         scp -i "$SSH_KEY" -r .next package.json ecosystem.config.js $NEXT_USER@$NEXT_SERVER:$NEXT_DEPLOY_PATH
                         ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no $NEXT_USER@$NEXT_SERVER << 'EOF'
                             cd $NEXT_DEPLOY_PATH
-                            npm install --omit=dev
+                            npm ci --omit=dev
                             npm run build
-                            pm2 restart ecosystem.config.js || pm2 start npm --name "next-app" -- start
+                            pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
                             pm2 save
                         EOF
                         """
