@@ -28,17 +28,17 @@ pipeline {
         PATH = "${JAVA_HOME}/bin:${PATH}"
         EMAIL_RECIPIENTS = 'sarita@techspira.co.in'
         // Tomcat Variables
-        TOMCAT_SERVER = '54.174.217.216'
+        TOMCAT_SERVER = '54.86.98.91'
         TOMCAT_USER = 'ubuntu'
         TOMCAT_DEPLOY_PATH = '/opt/tomcat9/webapps'
         
         // Next.js Variables
-        NEXT_SERVER = '54.174.217.216'
+        NEXT_SERVER = '54.86.98.91'
         NEXT_USER = 'ubuntu'
         NEXT_DEPLOY_PATH = '/var/www/nextjs-app'
         
         // Nexus Variables
-        NEXUS_URL = 'http://54.174.217.216:3000'
+        NEXUS_URL = 'http://54.86.98.91:3000'
         NEXUS_REPO = 'petclinic'
         NEXUS_CREDENTIALS = 'admin:password'
         
