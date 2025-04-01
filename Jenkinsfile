@@ -19,6 +19,7 @@ pipeline {
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
+        sonarqube 'sonarqube-scanner'  // Ensure SonarQube scanner is configured in Jenkins
     }
 
     environment {
@@ -40,8 +41,8 @@ pipeline {
         NEXUS_URL = 'http://54.86.98.91:3000'
         NEXUS_REPO = 'petclinic'
         NEXUS_CREDENTIALS = 'admin:password'
-
-        // SonarQube
+        
+        // SonarQube Scanner
         SCANNER_HOME = tool 'sonarqube-scanner'
     }
 
@@ -50,12 +51,12 @@ pipeline {
             steps {
                 script {
                     echo "Cloning repository..."
-                    checkout([
-                        $class: 'GitSCM',
-                        branches: [[name: "${params.branch_name}"]],
-                        userRemoteConfigs: [[
-                            url: 'https://github.com/saritaharihar/PetClinic.git',
-                            credentialsId: 'github-token'
+                    checkout([ 
+                        $class: 'GitSCM', 
+                        branches: [[name: "${params.branch_name}"]], 
+                        userRemoteConfigs: [[ 
+                            url: 'https://github.com/saritaharihar/PetClinic.git', 
+                            credentialsId: 'github-token' 
                         ]]
                     ])
                 }
@@ -90,7 +91,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Package Code') {
             steps {
                 script {
@@ -99,7 +100,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Upload to Nexus') {
             steps {
                 script {
@@ -116,7 +117,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy to Tomcat') {
             steps {
                 script {
@@ -131,7 +132,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy Next.js to EC2') {
             steps {
                 script {
@@ -152,7 +153,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Run Ansible Deployment') {
             steps {
                 script {
