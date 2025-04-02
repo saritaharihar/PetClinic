@@ -29,7 +29,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 script {
-                    checkout scmGit(branches: [[name: params.branch_name]], userRemoteConfigs: [[url: 'https://github.com/saritaharihar/PetClinic.git', credentialsId: 'github-token']])
+                    checkout scmGit(branches: [[name: 'master']], userRemoteConfigs: [[url: 'https://github.com/saritaharihar/PetClinic.git', credentialsId: 'github-token']])
                 }
             }
         }
@@ -39,20 +39,6 @@ pipeline {
                 sh "mvn test"
             }
         }
-
-        // Optional SonarQube Analysis
-        /* stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonarqube-server') {
-                    sh """
-                    $SCANNER_HOME/bin/sonar-scanner \
-                    -Dsonar.projectKey=petclinic \
-                    -Dsonar.sources=src \
-                    -Dsonar.java.binaries=target/classes
-                    """
-                }
-            }
-        } */
 
         stage('Package Code') {
             steps {
