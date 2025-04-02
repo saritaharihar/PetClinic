@@ -1,31 +1,16 @@
 pipeline {
     agent { label 'worker-01' }
 
-    parameters {
-        string(defaultValue: 'master', description: 'Branch to checkout', name: 'branch_name')
-        choice(choices: ['DEV', 'SIT', 'UAT'], description: 'Deployment Environment', name: 'environment')
-    }
-
-    triggers {
-        cron('00 20 * * *')
-    }
-
-    options {
-        disableConcurrentBuilds()
-        buildDiscarder logRotator(numToKeepStr: '20')
-        timestamps()
-    }
-
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
-        sonar 'SonarQube Scanner'
+        sonar 'SonarRunnerInstallation' // ✅ Correct SonarQube tool type
     }
 
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:$PATH"
-        
+
         // Tomcat Variables
         TOMCAT_SERVER = '34.201.104.10'
         TOMCAT_USER = 'ubuntu'
@@ -41,7 +26,7 @@ pipeline {
         NEXUS_REPO = 'petclinic'
 
         // SonarQube Scanner (Fixed Reference)
-        SCANNER_HOME = tool name: 'SonarQube Scanner'
+        SCANNER_HOME = tool 'SonarRunnerInstallation' // ✅ Corrected
     }
 
     stages {
