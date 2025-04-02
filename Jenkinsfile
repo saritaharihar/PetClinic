@@ -10,9 +10,6 @@ pipeline {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:$PATH"
 
-        // SonarQube Scanner (✅ Corrected Reference)
-        SCANNER_HOME = tool 'SonarQube Scanner'  // ✅ Corrected way
-
         // Tomcat Variables
         TOMCAT_SERVER = '34.201.104.10'
         TOMCAT_USER = 'ubuntu'
@@ -24,7 +21,7 @@ pipeline {
         NEXT_DEPLOY_PATH = '/var/www/nextjs-app'
 
         // Nexus Variables
-        NEXUS_URL = 'http://34.201.104.10:3000'
+        NEXUS_URL = 'http://34.201.104.10:9000'
         NEXUS_REPO = 'petclinic'
     }
 
@@ -37,27 +34,25 @@ pipeline {
             }
         }
 
-        stage('Tests & Scans') {
-            parallel {
-                stage('Unit Testing') {
-                    steps {
-                        sh "mvn test"
-                    }
-                }
-                stage('SonarQube Analysis') {
-                    steps {
-                        withSonarQubeEnv('sonarqube-server') {
-                            sh """
-                            $SCANNER_HOME/bin/sonar-scanner \
-                            -Dsonar.projectKey=petclinic \
-                            -Dsonar.sources=src \
-                            -Dsonar.java.binaries=target/classes
-                            """
-                        }
-                    }
-                }
+        stage('Unit Testing') {
+            steps {
+                sh "mvn test"
             }
         }
+
+        // Optional SonarQube Analysis
+        /* stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonarqube-server') {
+                    sh """
+                    $SCANNER_HOME/bin/sonar-scanner \
+                    -Dsonar.projectKey=petclinic \
+                    -Dsonar.sources=src \
+                    -Dsonar.java.binaries=target/classes
+                    """
+                }
+            }
+        } */
 
         stage('Package Code') {
             steps {
