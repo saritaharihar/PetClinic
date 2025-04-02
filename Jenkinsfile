@@ -4,12 +4,14 @@ pipeline {
     tools {
         jdk 'JAVA8'
         maven 'MAVEN3'
-        sonar 'SonarRunnerInstallation' // ✅ Correct SonarQube tool type
     }
 
     environment {
         JAVA_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
         PATH = "${JAVA_HOME}/bin:$PATH"
+
+        // SonarQube Scanner (✅ Corrected Reference)
+        SCANNER_HOME = tool 'SonarQube Scanner'  // ✅ Corrected way
 
         // Tomcat Variables
         TOMCAT_SERVER = '34.201.104.10'
@@ -24,9 +26,6 @@ pipeline {
         // Nexus Variables
         NEXUS_URL = 'http://34.201.104.10:3000'
         NEXUS_REPO = 'petclinic'
-
-        // SonarQube Scanner (Fixed Reference)
-        SCANNER_HOME = tool 'SonarRunnerInstallation' // ✅ Corrected
     }
 
     stages {
