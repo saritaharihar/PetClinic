@@ -40,8 +40,8 @@ pipeline {
         NEXUS_URL = 'http://34.201.104.10:3000'
         NEXUS_REPO = 'petclinic'
 
-        // SonarQube Scanner
-        SCANNER_HOME = tool 'SonarQube Scanner'
+        // SonarQube Scanner (Fixed Reference)
+        SCANNER_HOME = tool name: 'SonarQube Scanner'
     }
 
     stages {
@@ -63,7 +63,12 @@ pipeline {
                 stage('SonarQube Analysis') {
                     steps {
                         withSonarQubeEnv('sonarqube-server') {
-                            sh "${SCANNER_HOME}/bin/sonar-scanner -Dsonar.projectKey=petclinic -Dsonar.sources=src -Dsonar.java.binaries=target/classes"
+                            sh """
+                            $SCANNER_HOME/bin/sonar-scanner \
+                            -Dsonar.projectKey=petclinic \
+                            -Dsonar.sources=src \
+                            -Dsonar.java.binaries=target/classes
+                            """
                         }
                     }
                 }
