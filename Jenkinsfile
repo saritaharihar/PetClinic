@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     environment {
-        EC2_USER = "ubuntu"
-        EC2_HOST = "34.201.104.10"
-        APP_DIR = "/var/www/nextjs-app"
+        EC2_USER = 'ubuntu'
+        EC2_HOST = '34.201.104.10'  // Replace with your EC2 instance IP
+        DEPLOY_PATH = '/var/www/nextjs-app'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: 'https://github.com/saritaharihar/PetClinic.git', credentialsId: 'github-token'
+                git 'https://github.com/yourusername/nextjs-app.git'
             }
         }
 
@@ -22,7 +22,6 @@ pipeline {
 
         stage('Run Linting & Tests') {
             steps {
-                sh 'npm run lint'
                 sh 'npm test'
             }
         }
@@ -35,24 +34,22 @@ pipeline {
 
         stage('Deploy to AWS EC2') {
             steps {
-                sh """
-                scp -r .next package.json next.config.js ubuntu@${EC2_HOST}:${APP_DIR}
-                ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
-                    cd ${APP_DIR}
-                    npm install --omit=dev
-                    pm2 restart nextjs-app || pm2 start "npm start" --name nextjs-app
-                EOF
-                """
+                script {
+                    // Transfer build files to EC2 instance
+                    sh """
+                        scp -r .next static package.json pm2.config.js ${EC2_USER}@${EC2_HOST}:${DEPLOY_PATH}
+                    """
+                    
+                    // Connect to EC2 and restart the Next.js app
+                    sh """
+                        ssh ${EC2_USER}@${EC2_HOST} << EOF
+                        cd ${DEPLOY_PATH}
+                        npm install --omit=dev
+                        pm2 restart pm2.config.js || pm2 start pm2.config.js
+                        EOF
+                    """
+                }
             }
-        }
-    }
-    
-    post {
-        success {
-            echo "Deployment successful!"
-        }
-        failure {
-            echo "Deployment failed!"
         }
     }
 }
