@@ -5,12 +5,13 @@ pipeline {
         EC2_USER = 'ubuntu'
         EC2_HOST = '52.23.169.3'  // Deployment EC2 instance
         DEPLOY_PATH = '/var/www/nextjs-app'
+        REPO_URL = 'https://github.com/saritaharihar/YOUR-NEXTJS-REPO.git'  // Correct Next.js repo
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/saritaharihar/PetClinic.git'
+                git REPO_URL
             }
         }
 
@@ -22,6 +23,7 @@ pipeline {
 
         stage('Run Linting & Tests') {
             steps {
+                sh 'npm run lint'
                 sh 'npm test'
             }
         }
@@ -37,12 +39,12 @@ pipeline {
                 script {
                     // Transfer build files to EC2 instance
                     sh """
-                        scp -r .next static package.json pm2.config.js ${EC2_USER}@${EC2_HOST}:${DEPLOY_PATH}
+                        scp -r .next public package.json pm2.config.js ${EC2_USER}@${EC2_HOST}:${DEPLOY_PATH}
                     """
                     
                     // Connect to EC2 and restart the Next.js app
                     sh """
-                        ssh ${EC2_USER}@${EC2_HOST} << EOF
+                        ssh ${EC2_USER}@${EC2_HOST} << 'EOF'
                         cd ${DEPLOY_PATH}
                         npm install --omit=dev
                         pm2 restart pm2.config.js || pm2 start pm2.config.js
@@ -50,6 +52,15 @@ pipeline {
                     """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment successful!"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs for details."
         }
     }
 }
