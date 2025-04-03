@@ -2,32 +2,51 @@ pipeline {
     agent any
 
     environment {
-        TOMCAT_USER = 'tomcat'
-        TOMCAT_HOST = '52.23.169.3'
-        TOMCAT_PORT = '8080'
-        WAR_FILE = 'target/petclinic.war'
-        DEPLOY_PATH = '/opt/tomcat9/webapps'
+        EC2_USER = 'ubuntu'
+        EC2_HOST = '52.23.169.3'  // Deployment EC2 instance
+        DEPLOY_PATH = '/var/www/nextjs-app'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/saritaharihar/PetClinic.git'
+                git 'https://github.com/yourusername/nextjs-app.git'
             }
         }
 
-        stage('Build Java Application') {
+        stage('Install Dependencies') {
             steps {
-                sh 'mvn clean package'
+                sh 'npm install'
             }
         }
 
-        stage('Deploy to Tomcat') {
+        stage('Run Linting & Tests') {
+            steps {
+                sh 'npm test'
+            }
+        }
+
+        stage('Build Next.js App') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        stage('Deploy to AWS EC2') {
             steps {
                 script {
+                    // Transfer build files to EC2 instance
                     sh """
-                        scp ${WAR_FILE} ${TOMCAT_USER}@${TOMCAT_HOST}:${DEPLOY_PATH}/petclinic.war
-                        ssh ${TOMCAT_USER}@${TOMCAT_HOST} "sudo systemctl restart tomcat9"
+                        scp -r .next static package.json pm2.config.js ${EC2_USER}@${EC2_HOST}:${DEPLOY_PATH}
+                    """
+                    
+                    // Connect to EC2 and restart the Next.js app
+                    sh """
+                        ssh ${EC2_USER}@${EC2_HOST} << EOF
+                        cd ${DEPLOY_PATH}
+                        npm install --omit=dev
+                        pm2 restart pm2.config.js || pm2 start pm2.config.js
+                        EOF
                     """
                 }
             }
