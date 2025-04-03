@@ -2,9 +2,11 @@ pipeline {
     agent any
 
     environment {
-        EC2_USER = 'ubuntu'
-        EC2_HOST = '52.23.169.3'  // Replace with your EC2 instance IP
-        DEPLOY_PATH = '/var/www/nextjs-app'
+        TOMCAT_USER = 'tomcat'
+        TOMCAT_HOST = '52.23.169.3'
+        TOMCAT_PORT = '8080'
+        WAR_FILE = 'target/petclinic.war'
+        DEPLOY_PATH = '/opt/tomcat9/webapps'
     }
 
     stages {
@@ -14,39 +16,18 @@ pipeline {
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Build Java Application') {
             steps {
-                sh 'npm install'
+                sh 'mvn clean package'
             }
         }
 
-        stage('Run Linting & Tests') {
-            steps {
-                sh 'npm test'
-            }
-        }
-
-        stage('Build Next.js App') {
-            steps {
-                sh 'npm run build'
-            }
-        }
-
-        stage('Deploy to AWS EC2') {
+        stage('Deploy to Tomcat') {
             steps {
                 script {
-                    // Transfer build files to EC2 instance
                     sh """
-                        scp -r .next static package.json pm2.config.js ${EC2_USER}@${EC2_HOST}:${DEPLOY_PATH}
-                    """
-                    
-                    // Connect to EC2 and restart the Next.js app
-                    sh """
-                        ssh ${EC2_USER}@${EC2_HOST} << EOF
-                        cd ${DEPLOY_PATH}
-                        npm install --omit=dev
-                        pm2 restart pm2.config.js || pm2 start pm2.config.js
-                        EOF
+                        scp ${WAR_FILE} ${TOMCAT_USER}@${TOMCAT_HOST}:${DEPLOY_PATH}/petclinic.war
+                        ssh ${TOMCAT_USER}@${TOMCAT_HOST} "sudo systemctl restart tomcat9"
                     """
                 }
             }
