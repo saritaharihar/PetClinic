@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/yourusername/nextjs-app.git'
+                git 'https://github.com/saritaharihar/PetClinic.git'
             }
         }
 
