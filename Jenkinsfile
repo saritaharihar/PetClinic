@@ -1,30 +1,33 @@
 pipeline {
     agent any
+
+    environment {
+        GIT_REPO = 'https://github.com/saritaharihar/PetClinic.git'
+        CREDENTIALS_ID = 'github-token'  // Ensure this matches your stored credentials
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/your-repo/PetClinic.git'
+                git url: GIT_REPO, credentialsId: CREDENTIALS_ID
             }
         }
+        
         stage('Build with Maven') {
             steps {
-                dir('PetClinic') {
-                    sh 'mvn clean install'
-                }
+                sh 'mvn clean install'
             }
         }
+
         stage('Run Tests') {
             steps {
-                dir('PetClinic') {
-                    sh 'mvn test'
-                }
+                sh 'mvn test'
             }
         }
+
         stage('Package') {
             steps {
-                dir('PetClinic') {
-                    sh 'mvn package'
-                }
+                sh 'mvn package'
             }
         }
     }
