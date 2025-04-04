@@ -1,94 +1,63 @@
 pipeline {
-    agent { label 'worker-01' }
+    agent any
 
     environment {
-        GITHUB_CREDENTIALS_ID = 'github-token' // Use GitHub token for API limits
-        SONARQUBE_SCANNER = 'sonarqube-scanner'
-        NEXUS_URL = 'http://54.86.98.91:3000'
-        NEXUS_REPO = 'petclinic'
-        TOMCAT_SERVER = '52.23.169.3'
-        TOMCAT_PATH = '/opt/tomcat9/webapps'
-        NEXTJS_SERVER = '52.23.169.3'
-        NEXTJS_PATH = '/var/www/nextjs-app'
+        SSH_KEY = credentials('ec2-ssh-key')  // Add your SSH private key in Jenkins credentials
+        EC2_IP = "18.215.172.59"
+        REMOTE_DIR = "/var/www/nodeapp"
+        SSH_USER = "ubuntu"  // Assuming it's an Ubuntu AMI
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone') {
             steps {
-                script {
-                    git credentialsId: GITHUB_CREDENTIALS_ID, url: 'https://github.com/your-org/petclinic.git', branch: 'master'
+                git 'https://github.com/saritaharihar/PetClinic.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
+
+        stage('Lint & Test') {
+            steps {
+                sh 'npm test'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent (credentials: ['ec2-ssh-key']) {
+                    sh '''
+                        tar -czf app.tar.gz .next package.json node_modules public
+                        scp -o StrictHostKeyChecking=no app.tar.gz $SSH_USER@$EC2_IP:/tmp/
+                        ssh -o StrictHostKeyChecking=no $SSH_USER@$EC2_IP << EOF
+                          mkdir -p $REMOTE_DIR
+                          tar -xzf /tmp/app.tar.gz -C $REMOTE_DIR
+                          cd $REMOTE_DIR
+                          npm install --omit=dev
+                          pm2 restart all || pm2 start npm --name "nextjs-app" -- start
+                        EOF
+                    '''
                 }
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                sh 'mvn test'
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh 'mvn sonar:sonar'
-                }
-            }
-        }
-
-        stage('Build & Package') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
-
-        stage('Upload to Nexus') {
-            steps {
-                sh '''
-                mvn deploy:deploy-file -DgroupId=com.example -DartifactId=petclinic \
-                    -Dversion=1.0 -Dpackaging=war \
-                    -Dfile=target/petclinic.war \
-                    -DrepositoryId=nexus -Durl=${NEXUS_URL}/repository/${NEXUS_REPO}
-                '''
-            }
-        }
-
-        stage('Deploy to Tomcat') {
-            steps {
-                sh '''
-                scp -o StrictHostKeyChecking=no target/petclinic.war ubuntu@${TOMCAT_SERVER}:${TOMCAT_PATH}/petclinic.war
-                ssh -o StrictHostKeyChecking=no ubuntu@${TOMCAT_SERVER} "sudo systemctl restart tomcat9"
-                '''
-            }
-        }
-
-        stage('Deploy Next.js App') {
-            steps {
-                sh '''
-                rsync -avz --delete ./nextjs-app ubuntu@${NEXTJS_SERVER}:${NEXTJS_PATH}
-                ssh -o StrictHostKeyChecking=no ubuntu@${NEXTJS_SERVER} "cd ${NEXTJS_PATH} && pm2 restart nextjs-app || pm2 start npm --name nextjs-app -- run start"
-                '''
-            }
-        }
-
-        stage('Run Ansible Deployment') {
-            steps {
-                sh '''
-                ansible-playbook -i inventory deploy.yml
-                '''
             }
         }
     }
 
     post {
         success {
-            mail to: 'sarita@techspira.co.in',
-                 subject: 'Jenkins Build Success: PetClinic',
-                 body: 'The latest PetClinic build & deployment was successful.'
+            echo "Deployment successful!"
         }
         failure {
-            mail to: 'sarita@techspira.co.in',
-                 subject: 'Jenkins Build Failed: PetClinic',
-                 body: 'The latest PetClinic build & deployment failed. Please check Jenkins logs.'
+            echo "Deployment failed!"
         }
     }
 }
